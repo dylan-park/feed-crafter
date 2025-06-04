@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Feed Crafter</title>
+		<script>
+			// Immediate theme detection to prevent flash
+			(function() {
+				const stored = localStorage.getItem('theme');
+				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				const theme = stored || (prefersDark ? 'dark' : 'light');
+				document.documentElement.setAttribute('data-theme', theme);
+			})();
+		</script>
+		<link rel="stylesheet" href="/static/style.css">
+	</head>
+	<body>
+		<div class="container">
+			<header>
+				<h1>Feed Crafter</h1>
+				<button class="theme-toggle" onclick="toggleTheme()">
+					<span id="theme-icon">🌙</span>
+					<span id="theme-text">Dark</span>
+				</button>
+				<div class="channel-info">
+					<h2>{{ channel.title() }}</h2>
+					<p>{{ channel.description() }}</p>
+					<a href="{{ channel.link() }}" target="_blank">{{ channel.link() }}</a>
+				</div>
+			</header>
+			<nav>
+				<a href="/add" class="btn btn-primary">Add New Item</a>
+			</nav>
+			<main>
+				<h3>Feed Items ({{ channel.items().len() }})</h3> {% if channel.items().is_empty() %} <div class="empty-state">
+					<p>No items in the feed yet. <a href="/add">Add the first item</a>! </p>
+				</div> {% else %} <div class="items-list"> {% for item in channel.items() %} <article class="item">
+						<div class="item-header">
+							<h4> {% if let Some(link) = item.link() %} <a href="{{ link }}" target="_blank">{{ item.title().unwrap_or("Untitled") }}</a> {% else %} {{ item.title().unwrap_or("Untitled") }} {% endif %} </h4> {% if let Some(pub_date) = item.pub_date() %} <time class="pub-date">{{ pub_date }}</time> {% endif %}
+						</div>
+						<div class="item-content">
+							<p>{{ item.description().unwrap_or("No description") }}</p>
+						</div>
+						<div class="item-actions"> {% if let Some(guid) = item.guid() %} <form method="post" action="/delete/{{ guid.value() }}" class="delete-form">
+								<button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this item?')"> Delete </button>
+							</form> {% endif %} </div>
+					</article> {% endfor %} </div> {% endif %}
+			</main>
+		</div>
+		<script>
+			// Theme management
+			function getPreferredTheme() {
+				const stored = localStorage.getItem('theme');
+				if (stored) {
+					return stored;
+				}
+				return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+
+			function setTheme(theme) {
+				document.documentElement.setAttribute('data-theme', theme);
+				localStorage.setItem('theme', theme);
+				const icon = document.getElementById('theme-icon');
+				const text = document.getElementById('theme-text');
+				if (theme === 'dark') {
+					icon.textContent = '🌙';
+					text.textContent = 'Dark';
+				} else {
+					icon.textContent = '☀️';
+					text.textContent = 'Light';
+				}
+			}
+
+			function toggleTheme() {
+				const current = document.documentElement.getAttribute('data-theme') || 'light';
+				const newTheme = current === 'dark' ? 'light' : 'dark';
+				setTheme(newTheme);
+			}
+			// Initialize theme on page load
+			document.addEventListener('DOMContentLoaded', function() {
+				setTheme(getPreferredTheme());
+			});
+			// Listen for system theme changes
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+				if (!localStorage.getItem('theme')) {
+					setTheme(e.matches ? 'dark' : 'light');
+				}
+			});
+		</script>
+	</body>
+</html>

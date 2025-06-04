@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Add New Item - Feed Crafter</title>
+		<script>
+			// Immediate theme detection to prevent flash
+			(function() {
+				const stored = localStorage.getItem('theme');
+				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				const theme = stored || (prefersDark ? 'dark' : 'light');
+				document.documentElement.setAttribute('data-theme', theme);
+			})();
+		</script>
+		<link rel="stylesheet" href="/static/style.css">
+	</head>
+	<body>
+		<div class="container">
+			<header>
+				<h1>Add New RSS Item</h1>
+				<button class="theme-toggle" onclick="toggleTheme()">
+					<span id="theme-icon">🌙</span>
+					<span id="theme-text">Dark</span>
+				</button>
+			</header>
+			<main>
+				<form method="post" action="/add" class="add-item-form">
+					<div class="form-group">
+						<label for="title">Title *</label>
+						<input type="text" id="title" name="title" required maxlength="200">
+					</div>
+					<div class="form-group">
+						<label for="description">Description *</label>
+						<textarea id="description" name="description" required rows="6"></textarea>
+					</div>
+					<div class="form-group">
+						<label for="link">Link (optional)</label>
+						<input type="url" id="link" name="link" placeholder="https://example.com">
+					</div>
+					<div class="form-actions">
+						<button type="submit" class="btn btn-primary">Add Item</button>
+						<a href="/" class="btn btn-secondary">Cancel</a>
+					</div>
+				</form>
+			</main>
+		</div>
+		<script>
+			// Theme management
+			function getPreferredTheme() {
+				const stored = localStorage.getItem('theme');
+				if (stored) {
+					return stored;
+				}
+				return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+
+			function setTheme(theme) {
+				document.documentElement.setAttribute('data-theme', theme);
+				localStorage.setItem('theme', theme);
+				const icon = document.getElementById('theme-icon');
+				const text = document.getElementById('theme-text');
+				if (theme === 'dark') {
+					icon.textContent = '🌙';
+					text.textContent = 'Dark';
+				} else {
+					icon.textContent = '☀️';
+					text.textContent = 'Light';
+				}
+			}
+
+			function toggleTheme() {
+				const current = document.documentElement.getAttribute('data-theme') || 'light';
+				const newTheme = current === 'dark' ? 'light' : 'dark';
+				setTheme(newTheme);
+			}
+			// Initialize theme on page load
+			document.addEventListener('DOMContentLoaded', function() {
+				setTheme(getPreferredTheme());
+			});
+			// Listen for system theme changes
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+				if (!localStorage.getItem('theme')) {
+					setTheme(e.matches ? 'dark' : 'light');
+				}
+			});
+		</script>
+	</body>
+</html>
