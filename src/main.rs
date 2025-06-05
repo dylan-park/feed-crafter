@@ -3,9 +3,9 @@ use axum::{
     Router,
     body::Body,
     extract::{Form, Path, State},
-    response::{Html, IntoResponse, Redirect},
-    routing::{get, post},
     http::{Response, StatusCode},
+    response::{Html, IntoResponse, Json, Redirect},
+    routing::{delete, get, post},
 };
 use dotenvy::dotenv;
 use rss::{Channel, ChannelBuilder, Item, ItemBuilder};
@@ -46,6 +46,30 @@ struct NewItemForm {
     link: Option<String>,
 }
 
+// API data structures
+#[derive(Deserialize)]
+struct ApiNewItem {
+    title: String,
+    description: String,
+    link: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+struct ApiResponse<T> {
+    success: bool,
+    data: Option<T>,
+    message: String,
+}
+
+#[derive(serde::Serialize)]
+struct ApiItem {
+    id: String,
+    title: String,
+    description: String,
+    link: Option<String>,
+    pub_date: Option<String>,
+}
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
@@ -58,11 +82,16 @@ async fn main() {
 
     // Build our application with routes
     let app = Router::new()
+        // Web interface routes
         .route("/", get(index))
         .route("/feed.xml", get(serve_file))
         .route("/add", get(add_item_form))
         .route("/add", post(add_item))
         .route("/delete/{id}", post(delete_item))
+        // API routes
+        .route("/api/items", get(api_get_items))
+        .route("/api/items", post(api_add_item))
+        .route("/api/items/{id}", delete(api_delete_item))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(app_state);
 
@@ -212,4 +241,118 @@ async fn delete_item(
     }
 
     Ok(Redirect::to("/"))
+}
+
+// API route handlers
+async fn api_get_items(State(state): State<AppState>) -> Json<ApiResponse<Vec<ApiItem>>> {
+    let channel = state.channel.lock().unwrap();
+    let items: Vec<ApiItem> = channel
+        .items()
+        .iter()
+        .map(|item| ApiItem {
+            id: item
+                .guid()
+                .map(|g| g.value().to_string())
+                .unwrap_or_default(),
+            title: item.title().unwrap_or("Untitled").to_string(),
+            description: item.description().unwrap_or("No description").to_string(),
+            link: item.link().map(|s| s.to_string()),
+            pub_date: item.pub_date().map(|s| s.to_string()),
+        })
+        .collect();
+
+    Json(ApiResponse {
+        success: true,
+        data: Some(items),
+        message: "Items retrieved successfully".to_string(),
+    })
+}
+
+async fn api_add_item(
+    State(state): State<AppState>,
+    Json(payload): Json<ApiNewItem>,
+) -> Result<Json<ApiResponse<ApiItem>>, StatusCode> {
+    if payload.title.trim().is_empty() || payload.description.trim().is_empty() {
+        return Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            message: "Title and description are required".to_string(),
+        }));
+    }
+
+    let item = create_item(
+        payload.title.clone(),
+        payload.description.clone(),
+        payload.link.clone().filter(|s| !s.trim().is_empty()),
+    );
+
+    let api_item = ApiItem {
+        id: item
+            .guid()
+            .map(|g| g.value().to_string())
+            .unwrap_or_default(),
+        title: payload.title,
+        description: payload.description,
+        link: payload.link,
+        pub_date: item.pub_date().map(|s| s.to_string()),
+    };
+
+    {
+        let mut channel = state.channel.lock().unwrap();
+        let mut items = channel.items().to_vec();
+        items.insert(0, item);
+        channel.set_items(items);
+
+        // Save to file
+        write_channel(&channel, None);
+    }
+
+    Ok(Json(ApiResponse {
+        success: true,
+        data: Some(api_item),
+        message: "Item added successfully".to_string(),
+    }))
+}
+
+async fn api_delete_item(
+    State(state): State<AppState>,
+    Path(item_id): Path<String>,
+) -> Json<ApiResponse<()>> {
+    let mut found = false;
+
+    {
+        let mut channel = state.channel.lock().unwrap();
+
+        let items: Vec<Item> = channel
+            .items()
+            .iter()
+            .filter(|item| {
+                let matches = item.guid().map(|g| g.value() == item_id).unwrap_or(false);
+                if matches {
+                    found = true;
+                }
+                !matches
+            })
+            .cloned()
+            .collect();
+
+        if found {
+            channel.set_items(items);
+            write_channel(&channel, None);
+        }
+    }
+
+    if found {
+        Json(ApiResponse {
+            success: true,
+            data: Some(()),
+            message: "Item deleted successfully".to_string(),
+        })
+    } else {
+        Json(ApiResponse {
+            success: false,
+            data: None,
+            message: "Item not found".to_string(),
+        })
+    }
 }
