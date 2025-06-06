@@ -85,6 +85,7 @@ pub async fn add_item(
         let mut items = channel.items().to_vec();
         items.insert(0, item);
         channel.set_items(items);
+        channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
 
         // Save to file
         write_channel(&channel, None);
@@ -107,6 +108,7 @@ pub async fn delete_item(
             .collect();
 
         channel.set_items(items);
+        channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
 
         // Save to file
         write_channel(&channel, None);

@@ -30,6 +30,7 @@ pub fn create_feed() -> Channel {
             env::var("CHANNEL_DESCRIPTION")
                 .expect("Expected a channel description in the environment"),
         )
+        .last_build_date(chrono::Utc::now().to_rfc2822())
         .build()
 }
 
