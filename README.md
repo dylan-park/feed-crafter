@@ -44,6 +44,11 @@ services:
     ports:
       - 3000:3000 # change the first 3000 to change the port for your local network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 ```
 
 ```bash

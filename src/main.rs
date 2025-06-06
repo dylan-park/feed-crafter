@@ -91,6 +91,7 @@ async fn main() {
         .route("/add", get(add_item_form))
         .route("/add", post(add_item))
         .route("/delete/{id}", post(delete_item))
+        .route("/health", get(health_check))
         // API routes
         .route("/api/items", get(api_get_items))
         .route("/api/items", post(api_add_item))
@@ -241,6 +242,10 @@ async fn delete_item(
     }
 
     Ok(Redirect::to("/"))
+}
+
+async fn health_check() -> impl IntoResponse {
+    StatusCode::OK
 }
 
 // API route handlers

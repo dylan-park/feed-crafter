@@ -26,7 +26,8 @@ FROM debian:bookworm-slim
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libssl3 \
-        ca-certificates && \
+        ca-certificates \
+        curl && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy the binary and static files from the builder
