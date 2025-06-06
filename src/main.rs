@@ -74,6 +74,9 @@ struct ApiItem {
 async fn main() {
     dotenv().ok();
 
+    // Ensure the ./feed directory exists
+    fs::create_dir_all("./feed").expect("Failed to create ./feed directory");
+
     // Initialize or load the RSS feed
     let channel = initialize_feed();
     let app_state = AppState {
@@ -107,9 +110,6 @@ async fn main() {
 }
 
 fn initialize_feed() -> Channel {
-    // Ensure the ./feed directory exists
-    fs::create_dir_all("./feed").expect("Failed to create ./feed directory");
-
     if StdPath::new("./feed/feed.xml").exists() {
         let file = File::open("./feed/feed.xml").expect("Error opening feed.xml");
         let reader = BufReader::new(file);

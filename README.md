@@ -40,7 +40,7 @@ services:
       - CHANNEL_LINK=http://localhost:3000 # required by RSS standard, can be modified if you like
       - CHANNEL_DESCRIPTION="An RSS feed." # change to describe the RSS feed
     volumes:
-      - ./feed/feed.xml:/app/feed/feed.xml
+      - ./feed:/app/feed
     ports:
       - 3000:3000 # change the first 3000 to change the port for your local network
     restart: unless-stopped

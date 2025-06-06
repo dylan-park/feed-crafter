@@ -10,7 +10,7 @@ services:
       - CHANNEL_LINK=http://localhost:3000
       - CHANNEL_DESCRIPTION="An RSS feed."
     volumes:
-      - ./feed/feed.xml:/app/feed/feed.xml
+      - ./feed:/app/feed
     ports:
       - 3000:3000
     restart: unless-stopped
