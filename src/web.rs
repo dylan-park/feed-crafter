@@ -25,7 +25,7 @@ struct AddItemTemplate {}
 #[derive(Deserialize)]
 pub struct NewItemForm {
     title: String,
-    description: String,
+    description: Option<String>,
     link: Option<String>,
 }
 
@@ -70,13 +70,13 @@ pub async fn add_item(
     State(state): State<AppState>,
     Form(form): Form<NewItemForm>,
 ) -> Result<Redirect, StatusCode> {
-    if form.title.trim().is_empty() || form.description.trim().is_empty() {
+    if form.title.trim().is_empty() {
         return Err(StatusCode::BAD_REQUEST);
     }
 
     let item = create_item(
         form.title,
-        form.description,
+        form.description.filter(|s| !s.trim().is_empty()),
         form.link.filter(|s| !s.trim().is_empty()),
     );
 

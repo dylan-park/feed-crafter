@@ -11,7 +11,7 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct ApiNewItem {
     title: String,
-    description: String,
+    description: Option<String>,
     link: Option<String>,
 }
 
@@ -26,7 +26,7 @@ pub struct ApiResponse<T> {
 pub struct ApiItem {
     id: String,
     title: String,
-    description: String,
+    description: Option<String>,
     link: Option<String>,
     pub_date: Option<String>,
 }
@@ -43,7 +43,7 @@ pub async fn api_get_items(State(state): State<AppState>) -> Json<ApiResponse<Ve
                 .map(|g| g.value().to_string())
                 .unwrap_or_default(),
             title: item.title().unwrap_or("Untitled").to_string(),
-            description: item.description().unwrap_or("No description").to_string(),
+            description: item.description().map(|s| s.to_string()),
             link: item.link().map(|s| s.to_string()),
             pub_date: item.pub_date().map(|s| s.to_string()),
         })
@@ -60,17 +60,17 @@ pub async fn api_add_item(
     State(state): State<AppState>,
     Json(payload): Json<ApiNewItem>,
 ) -> Result<Json<ApiResponse<ApiItem>>, StatusCode> {
-    if payload.title.trim().is_empty() || payload.description.trim().is_empty() {
+    if payload.title.trim().is_empty() {
         return Ok(Json(ApiResponse {
             success: false,
             data: None,
-            message: "Title and description are required".to_string(),
+            message: "Title is required".to_string(),
         }));
     }
 
     let item = create_item(
         payload.title.clone(),
-        payload.description.clone(),
+        payload.description.clone().filter(|s| !s.trim().is_empty()),
         payload.link.clone().filter(|s| !s.trim().is_empty()),
     );
 

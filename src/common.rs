@@ -34,17 +34,19 @@ pub fn create_feed() -> Channel {
         .build()
 }
 
-pub fn create_item(title: String, description: String, link: Option<String>) -> Item {
+pub fn create_item(title: String, description: Option<String>, link: Option<String>) -> Item {
     let mut binding = ItemBuilder::default();
     let mut builder = binding
         .title(Some(title))
-        .description(Some(description))
         .guid(Some(rss::Guid {
             value: Uuid::new_v4().to_string(),
             permalink: false,
         }))
         .pub_date(Some(chrono::Utc::now().to_rfc2822()));
 
+    if let Some(description) = description {
+        builder = builder.description(Some(description));
+    }
     if let Some(link) = link {
         builder = builder.link(Some(link));
     }

@@ -83,7 +83,7 @@ When Feed Crafter is first run, an RSS feed file is created based on environment
 
 Open in your web browser: http://localhost:3000/
 
-The home page displays some information about the loaded feed, as well as a list of all of the current items in the feed. You can click on the delete button on any single item to remove it from the feed. If you click on the *Add New Item* button, you are taken to a page where you can add a new item with a title, description, and optional link.
+The home page displays some information about the loaded feed, as well as a list of all of the current items in the feed. You can click on the delete button on any single item to remove it from the feed. If you click on the *Add New Item* button, you are taken to a page where you can add a new item with a title, and an optional description and link.
 
 ### API
 
@@ -114,7 +114,7 @@ The home page displays some information about the loaded feed, as well as a list
 ```json
 {
   "title": "New Item Title",
-  "description": "Item description",
+  "description": "Item description",  // optional
   "link": "https://example.com"  // optional
 }
 ```
