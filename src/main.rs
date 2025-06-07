@@ -5,7 +5,7 @@ mod web;
 use api::*;
 use axum::{
     Router,
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
 };
 use common::*;
 use dotenvy::dotenv;
@@ -43,6 +43,7 @@ async fn main() {
         .route("/api/items", get(api_get_items))
         .route("/api/items", post(api_add_item))
         .route("/api/items/{id}", delete(api_delete_item))
+        .route("/api/items/{id}", put(api_edit_item))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(app_state);
 
