@@ -21,9 +21,23 @@ struct IndexTemplate {
 #[template(path = "add_item.html")]
 struct AddItemTemplate {}
 
+#[derive(Template)]
+#[template(path = "edit_item.html")]
+struct EditItemTemplate {
+    item: Item,
+    item_id: String,
+}
+
 // Form data structures
 #[derive(Deserialize)]
 pub struct NewItemForm {
+    title: String,
+    description: Option<String>,
+    link: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct EditItemForm {
     title: String,
     description: Option<String>,
     link: Option<String>,
@@ -60,6 +74,27 @@ pub async fn serve_file() -> impl IntoResponse {
 
 pub async fn add_item_form() -> Result<Html<String>, StatusCode> {
     let template = AddItemTemplate {};
+    match template.render() {
+        Ok(html) => Ok(Html(html)),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+pub async fn edit_item_form(
+    State(state): State<AppState>,
+    Path(item_id): Path<String>,
+) -> Result<Html<String>, StatusCode> {
+    let channel = state.channel.lock().unwrap();
+
+    // Find the item with the matching GUID
+    let item = channel
+        .items()
+        .iter()
+        .find(|item| item.guid().map(|g| g.value() == item_id).unwrap_or(false))
+        .ok_or(StatusCode::NOT_FOUND)?
+        .clone();
+
+    let template = EditItemTemplate { item, item_id };
     match template.render() {
         Ok(html) => Ok(Html(html)),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -119,4 +154,45 @@ pub async fn delete_item(
 
 pub async fn health_check() -> impl IntoResponse {
     StatusCode::OK
+}
+
+pub async fn edit_item(
+    State(state): State<AppState>,
+    Path(item_id): Path<String>,
+    Form(form): Form<EditItemForm>,
+) -> Result<Redirect, StatusCode> {
+    if form.title.trim().is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    {
+        let mut channel = state.channel.lock().unwrap();
+        let mut items = channel.items().to_vec();
+
+        // Find and update the item
+        if let Some(item_index) = items
+            .iter()
+            .position(|item| item.guid().map(|g| g.value() == item_id).unwrap_or(false))
+        {
+            // Create updated item
+            let updated_item = create_item(
+                form.title,
+                form.description.filter(|s| !s.trim().is_empty()),
+                form.link.filter(|s| !s.trim().is_empty()),
+            );
+
+            // Replace the item at the found index
+            items[item_index] = updated_item;
+
+            channel.set_items(items);
+            channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
+
+            // Save to file
+            write_channel(&channel, None);
+        } else {
+            return Err(StatusCode::NOT_FOUND);
+        }
+    }
+
+    Ok(Redirect::to("/"))
 }
