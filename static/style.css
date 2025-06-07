@@ -136,6 +136,18 @@ nav {
 	background-color: #7f8c8d;
 }
 
+.btn-info {
+	background-color: #3498db;
+	color: white;
+	font-size: 12px;
+	padding: 5px 10px;
+	margin-right: 10px;
+}
+
+.btn-info:hover {
+	background-color: #2980b9;
+}
+
 .btn-danger {
 	background-color: #e74c3c;
 	color: white;

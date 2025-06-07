@@ -146,3 +146,75 @@ pub async fn api_delete_item(
         })
     }
 }
+
+pub async fn api_edit_item(
+    State(state): State<AppState>,
+    Path(item_id): Path<String>,
+    Json(payload): Json<ApiNewItem>,
+) -> Result<Json<ApiResponse<ApiItem>>, StatusCode> {
+    if payload.title.trim().is_empty() {
+        return Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            message: "Title is required".to_string(),
+        }));
+    }
+
+    let mut found_item: Option<ApiItem> = None;
+
+    {
+        let mut channel = state.channel.lock().unwrap();
+
+        let items: Vec<Item> = channel
+            .items()
+            .iter()
+            .map(|item| {
+                let matches = item.guid().map(|g| g.value() == item_id).unwrap_or(false);
+                if matches {
+                    // Create updated item
+                    let updated_item = create_item(
+                        payload.title.clone(),
+                        payload.description.clone().filter(|s| !s.trim().is_empty()),
+                        payload.link.clone().filter(|s| !s.trim().is_empty()),
+                    );
+
+                    // Store the API representation for response
+                    found_item = Some(ApiItem {
+                        id: updated_item
+                            .guid()
+                            .map(|g| g.value().to_string())
+                            .unwrap_or_default(),
+                        title: payload.title.clone(),
+                        description: payload.description.clone(),
+                        link: payload.link.clone(),
+                        pub_date: updated_item.pub_date().map(|s| s.to_string()),
+                    });
+
+                    updated_item
+                } else {
+                    item.clone()
+                }
+            })
+            .collect();
+
+        if found_item.is_some() {
+            channel.set_items(items);
+            channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
+            write_channel(&channel, None);
+        }
+    }
+
+    if let Some(api_item) = found_item {
+        Ok(Json(ApiResponse {
+            success: true,
+            data: Some(api_item),
+            message: "Item updated successfully".to_string(),
+        }))
+    } else {
+        Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            message: "Item not found".to_string(),
+        }))
+    }
+}
