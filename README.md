@@ -2,12 +2,12 @@
 
 ## About
 
-The purpose of this project is to create a system which can easily create, serve, and manage a custom RSS feed in a simple singular package. Specifically, I am not looking to create an RSS feed representation of web content, instead my goal is to store custom messages in a standardized format that can be used by other projects. I chose RSS as a technology because it's an established, standardized format with a lot of existing tooling made for viewing it, and it is very easy to programmatically navigate. Some examples could include:
+The purpose of this project is to create a system which can easily create, serve, and manage a custom RSS feed in a simple singular package. Specifically, I am not looking to create an RSS feed representation of web content, instead my goal is to store custom messages in a standardized format that can be used by other projects. I chose RSS as a technology because it's an established, standardized format with a lot of existing tooling made for digesting it (like RSS Readers), and it is very easy to programmatically navigate. Some examples could include:
 
-- A system message queue system accessible by a generic RSS reader.
+- A system alert queue system accessible by a generic RSS reader.
 - A house-wide notice board, multiple people are able to view, edit, and add to.
 
-This system provides a web interface, as well as API endpoints for managing entries. You can view all the existing messages, delete messages, and add new ones.
+This system provides a web interface, as well as API endpoints for managing items. You can view all the existing messages, edit and delete messages, and add new ones.
 
 ## How To Run
 To run via cargo locally:
@@ -83,7 +83,7 @@ When Feed Crafter is first run, an RSS feed file is created based on environment
 
 Open in your web browser: http://localhost:3000/
 
-The home page displays some information about the loaded feed, as well as a list of all of the current items in the feed. You can click on the delete button on any single item to remove it from the feed. If you click on the *Add New Item* button, you are taken to a page where you can add a new item with a title, and an optional description and link.
+The home page displays some information about the loaded feed, as well as a list of all of the current items in the feed. If you click on the *Add New Item* button, you are taken to a page where you can add a new item with a title, and an optional description and link. You can click on the *Delete* button on any single item to remove it from the feed. You can also click on the *Edit* button to edit any existing item.
 
 ### API
 
@@ -144,6 +144,34 @@ The home page displays some information about the loaded feed, as well as a list
   "success": true,
   "data": null,
   "message": "Item deleted successfully"
+}
+```
+
+- **PUT** /api/items/:id - Edits an RSS item by its ID.
+
+#### Request:
+
+```json
+{
+  "title": "Edited Item Title",
+  "description": "Edited Item description",  // optional
+  "link": "https://example.com"  // optional
+}
+```
+
+#### Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "new-uuid-here",
+    "title": "Edited Item Title",
+    "description": "Edited Item description",
+    "link": "https://example.com",
+    "pub_date": "Mon, 01 Jan 2024 12:00:00 +0000"
+  },
+  "message": "Item updated successfully"
 }
 ```
 
