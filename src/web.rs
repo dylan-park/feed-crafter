@@ -1,6 +1,7 @@
 use crate::common::*;
 use askama::Template;
 use axum::{
+    Json,
     body::Body,
     extract::{Form, Path, State},
     http::{Response, StatusCode},
@@ -41,6 +42,20 @@ pub struct EditItemForm {
     title: String,
     description: Option<String>,
     link: Option<String>,
+}
+
+// Health Check
+#[derive(serde::Serialize)]
+struct HealthStatus {
+    status: String,
+    timestamp: i64,
+    checks: std::collections::HashMap<String, CheckResult>,
+}
+
+#[derive(serde::Serialize)]
+struct CheckResult {
+    status: String,
+    message: Option<String>,
 }
 
 pub async fn index(State(state): State<AppState>) -> Result<Html<String>, StatusCode> {
@@ -152,10 +167,6 @@ pub async fn delete_item(
     Ok(Redirect::to("/"))
 }
 
-pub async fn health_check() -> impl IntoResponse {
-    StatusCode::OK
-}
-
 pub async fn edit_item(
     State(state): State<AppState>,
     Path(item_id): Path<String>,
@@ -195,4 +206,84 @@ pub async fn edit_item(
     }
 
     Ok(Redirect::to("/"))
+}
+
+pub async fn health_check() -> impl IntoResponse {
+    let mut checks = std::collections::HashMap::new();
+    let mut overall_healthy = true;
+
+    // File existence check
+    if StdPath::new("./feed/feed.xml").exists() {
+        checks.insert(
+            "feed_file".to_string(),
+            CheckResult {
+                status: "healthy".to_string(),
+                message: None,
+            },
+        );
+    } else {
+        checks.insert(
+            "feed_file".to_string(),
+            CheckResult {
+                status: "unhealthy".to_string(),
+                message: Some("feed.xml not found".to_string()),
+            },
+        );
+        overall_healthy = false;
+    }
+
+    // Directory permissions check
+    let feed_dir = StdPath::new("./feed");
+    if feed_dir.exists() {
+        let test_file = feed_dir.join(".health_temp");
+        match fs::write(&test_file, "test") {
+            Ok(_) => {
+                let _ = fs::remove_file(&test_file);
+                checks.insert(
+                    "directory_writable".to_string(),
+                    CheckResult {
+                        status: "healthy".to_string(),
+                        message: None,
+                    },
+                );
+            }
+            Err(e) => {
+                checks.insert(
+                    "directory_writable".to_string(),
+                    CheckResult {
+                        status: "unhealthy".to_string(),
+                        message: Some(format!("Cannot write to feed directory: {}", e)),
+                    },
+                );
+                overall_healthy = false;
+            }
+        }
+    } else {
+        checks.insert(
+            "directory_writable".to_string(),
+            CheckResult {
+                status: "unhealthy".to_string(),
+                message: Some("Feed directory does not exist".to_string()),
+            },
+        );
+        overall_healthy = false;
+    }
+
+    let health_status = HealthStatus {
+        status: if overall_healthy {
+            "healthy".to_string()
+        } else {
+            "unhealthy".to_string()
+        },
+        timestamp: chrono::Utc::now().timestamp(),
+        checks,
+    };
+
+    let status_code = if overall_healthy {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+
+    (status_code, Json(health_status))
 }
