@@ -25,7 +25,7 @@ async fn main() {
     fs::create_dir_all("./feed").expect("Failed to create ./feed directory");
 
     // Initialize or load the RSS feed
-    let channel = initialize_feed();
+    let channel = initialize_feed(&RealFileSystem);
     let app_state = AppState {
         channel: Arc::new(Mutex::new(channel)),
     };

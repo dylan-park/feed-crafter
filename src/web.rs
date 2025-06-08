@@ -138,7 +138,7 @@ pub async fn add_item(
         channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
 
         // Save to file
-        write_channel(&channel, None);
+        write_channel(&channel, None, &RealFileSystem);
     }
 
     Ok(Redirect::to("/"))
@@ -161,7 +161,7 @@ pub async fn delete_item(
         channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
 
         // Save to file
-        write_channel(&channel, None);
+        write_channel(&channel, None, &RealFileSystem);
     }
 
     Ok(Redirect::to("/"))
@@ -199,7 +199,7 @@ pub async fn edit_item(
             channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
 
             // Save to file
-            write_channel(&channel, None);
+            write_channel(&channel, None, &RealFileSystem);
         } else {
             return Err(StatusCode::NOT_FOUND);
         }
