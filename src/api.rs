@@ -93,7 +93,7 @@ pub async fn api_add_item(
         channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
 
         // Save to file
-        write_channel(&channel, None);
+        write_channel(&channel, None, &RealFileSystem);
     }
 
     Ok(Json(ApiResponse {
@@ -128,7 +128,7 @@ pub async fn api_delete_item(
         if found {
             channel.set_items(items);
             channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
-            write_channel(&channel, None);
+            write_channel(&channel, None, &RealFileSystem);
         }
     }
 
@@ -200,7 +200,7 @@ pub async fn api_edit_item(
         if found_item.is_some() {
             channel.set_items(items);
             channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
-            write_channel(&channel, None);
+            write_channel(&channel, None, &RealFileSystem);
         }
     }
 
