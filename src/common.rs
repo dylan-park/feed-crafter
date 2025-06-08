@@ -1,5 +1,5 @@
-use log::info;
 use axum::extract::{Path as AxumPath, State};
+use log::info;
 use rss::{Channel, ChannelBuilder, Guid, Item, ItemBuilder};
 use std::sync::{Arc, Mutex};
 use std::{
@@ -94,7 +94,7 @@ pub fn create_item(title: String, description: Option<String>, link: Option<Stri
 
     let item = builder.build();
     info!(
-        "Item Created:\nTitle: {}\nDescription: {}\nLink: {}",
+        "Item Created:\n{{\n\t\"title\": \"{}\"\n\t\"description\": \"{}\"\n\t\"link\": \"{}\"\n}}",
         item.clone().title.unwrap(),
         item.clone().description.unwrap_or_default(),
         item.clone().link.unwrap_or_default()
