@@ -7,6 +7,7 @@ use axum::{
     http::{Response, StatusCode},
     response::{Html, IntoResponse, Redirect},
 };
+use log::info;
 use rss::{Channel, Item};
 use serde::Deserialize;
 use std::{fs, path::Path as StdPath};
@@ -116,7 +117,7 @@ pub async fn edit_item_form(
     }
 }
 
-pub async fn add_item(
+pub async fn web_add_item(
     State(state): State<AppState>,
     Form(form): Form<NewItemForm>,
 ) -> Result<Redirect, StatusCode> {
@@ -130,44 +131,23 @@ pub async fn add_item(
         form.link.filter(|s| !s.trim().is_empty()),
     );
 
-    {
-        let mut channel = state.channel.lock().unwrap();
-        let mut items = channel.items().to_vec();
-        items.insert(0, item);
-        channel.set_items(items);
-        channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
-
-        // Save to file
-        write_channel(&channel, None, &RealFileSystem);
-    }
+    add_item(axum::extract::State(state), item.clone());
+    info!("Item added successfully: {}", item.guid().unwrap().value);
 
     Ok(Redirect::to("/"))
 }
 
-pub async fn delete_item(
+pub async fn web_delete_item(
     State(state): State<AppState>,
     Path(item_id): Path<String>,
 ) -> Result<Redirect, StatusCode> {
-    {
-        let mut channel = state.channel.lock().unwrap();
-        let items: Vec<Item> = channel
-            .items()
-            .iter()
-            .filter(|item| item.guid().map(|g| g.value() != item_id).unwrap_or(true))
-            .cloned()
-            .collect();
-
-        channel.set_items(items);
-        channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
-
-        // Save to file
-        write_channel(&channel, None, &RealFileSystem);
-    }
+    delete_item(axum::extract::State(state), axum::extract::Path(item_id.clone()));
+    info!("Item deleted successfully: {}", item_id);
 
     Ok(Redirect::to("/"))
 }
 
-pub async fn edit_item(
+pub async fn web_edit_item(
     State(state): State<AppState>,
     Path(item_id): Path<String>,
     Form(form): Form<EditItemForm>,
@@ -176,34 +156,18 @@ pub async fn edit_item(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    {
-        let mut channel = state.channel.lock().unwrap();
-        let mut items = channel.items().to_vec();
+    let item = edit_item(
+        axum::extract::State(state),
+        axum::extract::Path(item_id),
+        form.title,
+        form.description,
+        form.link,
+    );
 
-        // Find and update the item
-        if let Some(item_index) = items
-            .iter()
-            .position(|item| item.guid().map(|g| g.value() == item_id).unwrap_or(false))
-        {
-            // Create updated item
-            let updated_item = create_item(
-                form.title,
-                form.description.filter(|s| !s.trim().is_empty()),
-                form.link.filter(|s| !s.trim().is_empty()),
-            );
-
-            // Replace the item at the found index
-            items[item_index] = updated_item;
-
-            channel.set_items(items);
-            channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
-
-            // Save to file
-            write_channel(&channel, None, &RealFileSystem);
-        } else {
-            return Err(StatusCode::NOT_FOUND);
-        }
+    if item.is_none() {
+        return Err(StatusCode::NOT_FOUND);
     }
+    info!("Item edited successfully: {}", item.unwrap().guid().unwrap().value);
 
     Ok(Redirect::to("/"))
 }

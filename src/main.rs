@@ -9,6 +9,7 @@ use axum::{
 };
 use common::*;
 use dotenvy::dotenv;
+use log::info;
 use std::{
     env, fs,
     sync::{Arc, Mutex},
@@ -20,6 +21,7 @@ use web::*;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    env_logger::init();
 
     // Ensure the ./feed directory exists
     fs::create_dir_all("./feed").expect("Failed to create ./feed directory");
@@ -36,10 +38,10 @@ async fn main() {
         .route("/", get(index))
         .route("/feed.xml", get(serve_file))
         .route("/add", get(add_item_form))
-        .route("/add", post(add_item))
-        .route("/delete/{id}", post(delete_item))
+        .route("/add", post(web_add_item))
+        .route("/delete/{id}", post(web_delete_item))
         .route("/edit/{id}", get(edit_item_form))
-        .route("/edit/{id}", post(edit_item))
+        .route("/edit/{id}", post(web_edit_item))
         .route("/health", get(health_check))
         // API routes
         .route("/api/items", get(api_get_items))
@@ -56,6 +58,6 @@ async fn main() {
         .await
         .expect("Failed to bind to address");
 
-    println!("Server running on http://{}:{}", address, port);
+    info!("Server running on http://{}:{}", address, port);
     axum::serve(listener, app).await.unwrap();
 }

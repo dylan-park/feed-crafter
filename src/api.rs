@@ -4,8 +4,8 @@ use axum::{
     http::StatusCode,
     response::Json,
 };
-use rss::Item;
 use serde::Deserialize;
+use log::info;
 
 // API data structures
 #[derive(Deserialize)]
@@ -85,16 +85,8 @@ pub async fn api_add_item(
         pub_date: item.pub_date().map(|s| s.to_string()),
     };
 
-    {
-        let mut channel = state.channel.lock().unwrap();
-        let mut items = channel.items().to_vec();
-        items.insert(0, item);
-        channel.set_items(items);
-        channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
-
-        // Save to file
-        write_channel(&channel, None, &RealFileSystem);
-    }
+    add_item(axum::extract::State(state), item.clone());
+    info!("Item added successfully: {}", item.guid().unwrap().value);
 
     Ok(Json(ApiResponse {
         success: true,
@@ -107,32 +99,10 @@ pub async fn api_delete_item(
     State(state): State<AppState>,
     Path(item_id): Path<String>,
 ) -> Json<ApiResponse<()>> {
-    let mut found = false;
+    let return_item_id = delete_item(axum::extract::State(state), axum::extract::Path(item_id.clone()));
+    info!("Item deleted successfully: {}", item_id.clone());
 
-    {
-        let mut channel = state.channel.lock().unwrap();
-
-        let items: Vec<Item> = channel
-            .items()
-            .iter()
-            .filter(|item| {
-                let matches = item.guid().map(|g| g.value() == item_id).unwrap_or(false);
-                if matches {
-                    found = true;
-                }
-                !matches
-            })
-            .cloned()
-            .collect();
-
-        if found {
-            channel.set_items(items);
-            channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
-            write_channel(&channel, None, &RealFileSystem);
-        }
-    }
-
-    if found {
+    if return_item_id.is_some() {
         Json(ApiResponse {
             success: true,
             data: Some(()),
@@ -163,58 +133,46 @@ pub async fn api_edit_item(
     let mut found_item: Option<ApiItem> = None;
 
     {
-        let mut channel = state.channel.lock().unwrap();
-
-        let items: Vec<Item> = channel
-            .items()
-            .iter()
-            .map(|item| {
-                let matches = item.guid().map(|g| g.value() == item_id).unwrap_or(false);
-                if matches {
-                    // Create updated item
-                    let updated_item = create_item(
-                        payload.title.clone(),
-                        payload.description.clone().filter(|s| !s.trim().is_empty()),
-                        payload.link.clone().filter(|s| !s.trim().is_empty()),
-                    );
-
-                    // Store the API representation for response
-                    found_item = Some(ApiItem {
-                        id: updated_item
-                            .guid()
-                            .map(|g| g.value().to_string())
-                            .unwrap_or_default(),
-                        title: payload.title.clone(),
-                        description: payload.description.clone(),
-                        link: payload.link.clone(),
-                        pub_date: updated_item.pub_date().map(|s| s.to_string()),
-                    });
-
-                    updated_item
-                } else {
-                    item.clone()
-                }
-            })
-            .collect();
-
-        if found_item.is_some() {
-            channel.set_items(items);
-            channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
-            write_channel(&channel, None, &RealFileSystem);
+        let updated_item = edit_item(
+            axum::extract::State(state),
+            axum::extract::Path(item_id),
+            payload.title.clone(),
+            payload.description.clone(),
+            payload.link.clone(),
+        );
+        if updated_item.is_some() {
+            // Store the API representation for response
+            found_item = Some(ApiItem {
+                id: updated_item
+                    .as_ref()
+                    .unwrap()
+                    .guid()
+                    .map(|g| g.value().to_string())
+                    .unwrap_or_default(),
+                title: payload.title.clone(),
+                description: payload.description.clone(),
+                link: payload.link.clone(),
+                pub_date: updated_item
+                    .as_ref()
+                    .unwrap()
+                    .pub_date()
+                    .map(|s| s.to_string()),
+            });
         }
-    }
 
-    if let Some(api_item) = found_item {
-        Ok(Json(ApiResponse {
-            success: true,
-            data: Some(api_item),
-            message: "Item updated successfully".to_string(),
-        }))
-    } else {
-        Ok(Json(ApiResponse {
-            success: false,
-            data: None,
-            message: "Item not found".to_string(),
-        }))
+        if let Some(api_item) = found_item {
+            info!("Item edited successfully: {}", api_item.id);
+            Ok(Json(ApiResponse {
+                success: true,
+                data: Some(api_item),
+                message: "Item updated successfully".to_string(),
+            }))
+        } else {
+            Ok(Json(ApiResponse {
+                success: false,
+                data: None,
+                message: "Item not found".to_string(),
+            }))
+        }
     }
 }
