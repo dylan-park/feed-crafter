@@ -1,3 +1,4 @@
+use log::info;
 use rss::{Channel, ChannelBuilder, Item, ItemBuilder};
 use std::sync::{Arc, Mutex};
 use std::{env, fs::File, io::BufReader};
@@ -12,12 +13,17 @@ pub struct AppState {
 
 pub fn initialize_feed() -> Channel {
     if StdPath::new("./feed/feed.xml").exists() {
+        info!("Feed found on disk, reading...");
         let file = File::open("./feed/feed.xml").expect("Error opening feed.xml");
         let reader = BufReader::new(file);
-        Channel::read_from(reader).expect("Error reading feed into Channel")
+        let channel = Channel::read_from(reader).expect("Error reading feed into Channel");
+        info!("Feed successfully read from disk");
+        channel
     } else {
+        info!("No feed found on disk, creating based on environment variables");
         let channel = create_feed();
         write_channel(&channel, None);
+        info!("Feed successfully created and written to disk");
         channel
     }
 }
@@ -51,11 +57,19 @@ pub fn create_item(title: String, description: Option<String>, link: Option<Stri
         builder = builder.link(Some(link));
     }
 
-    builder.build()
+    let item = builder.build();
+    info!(
+        "Item Created:\nTitle: {}\nDescription: {}\nLink: {}",
+        item.clone().title.unwrap(),
+        item.clone().description.unwrap_or_default(),
+        item.clone().link.unwrap_or_default()
+    );
+    item
 }
 
 pub fn write_channel(channel: &Channel, path: Option<&StdPath>) {
     let rss_content = channel.to_string();
     let file_path = path.unwrap_or_else(|| StdPath::new("./feed/feed.xml"));
     fs::write(file_path, &rss_content).expect("Failed to write RSS feed to file");
+    info!("Feed written successfully");
 }

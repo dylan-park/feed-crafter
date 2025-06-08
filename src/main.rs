@@ -9,6 +9,7 @@ use axum::{
 };
 use common::*;
 use dotenvy::dotenv;
+use log::info;
 use std::{
     env, fs,
     sync::{Arc, Mutex},
@@ -20,6 +21,7 @@ use web::*;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    env_logger::init();
 
     // Ensure the ./feed directory exists
     fs::create_dir_all("./feed").expect("Failed to create ./feed directory");
@@ -56,6 +58,6 @@ async fn main() {
         .await
         .expect("Failed to bind to address");
 
-    println!("Server running on http://{}:{}", address, port);
+    info!("Server running on http://{}:{}", address, port);
     axum::serve(listener, app).await.unwrap();
 }
