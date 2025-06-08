@@ -7,6 +7,7 @@ use axum::{
     http::{Response, StatusCode},
     response::{Html, IntoResponse, Redirect},
 };
+use log::info;
 use rss::{Channel, Item};
 use serde::Deserialize;
 use std::{fs, path::Path as StdPath};
@@ -130,7 +131,8 @@ pub async fn web_add_item(
         form.link.filter(|s| !s.trim().is_empty()),
     );
 
-    add_item(axum::extract::State(state), item);
+    add_item(axum::extract::State(state), item.clone());
+    info!("Item added successfully: {}", item.guid().unwrap().value);
 
     Ok(Redirect::to("/"))
 }
@@ -139,7 +141,8 @@ pub async fn web_delete_item(
     State(state): State<AppState>,
     Path(item_id): Path<String>,
 ) -> Result<Redirect, StatusCode> {
-    delete_item(axum::extract::State(state), axum::extract::Path(item_id));
+    delete_item(axum::extract::State(state), axum::extract::Path(item_id.clone()));
+    info!("Item deleted successfully: {}", item_id);
 
     Ok(Redirect::to("/"))
 }
@@ -164,6 +167,7 @@ pub async fn web_edit_item(
     if item.is_none() {
         return Err(StatusCode::NOT_FOUND);
     }
+    info!("Item edited successfully: {}", item.unwrap().guid().unwrap().value);
 
     Ok(Redirect::to("/"))
 }

@@ -5,6 +5,7 @@ use axum::{
     response::Json,
 };
 use serde::Deserialize;
+use log::info;
 
 // API data structures
 #[derive(Deserialize)]
@@ -84,7 +85,8 @@ pub async fn api_add_item(
         pub_date: item.pub_date().map(|s| s.to_string()),
     };
 
-    add_item(axum::extract::State(state), item);
+    add_item(axum::extract::State(state), item.clone());
+    info!("Item added successfully: {}", item.guid().unwrap().value);
 
     Ok(Json(ApiResponse {
         success: true,
@@ -97,9 +99,10 @@ pub async fn api_delete_item(
     State(state): State<AppState>,
     Path(item_id): Path<String>,
 ) -> Json<ApiResponse<()>> {
-    let item_id = delete_item(axum::extract::State(state), axum::extract::Path(item_id));
+    let return_item_id = delete_item(axum::extract::State(state), axum::extract::Path(item_id.clone()));
+    info!("Item deleted successfully: {}", item_id.clone());
 
-    if item_id.is_some() {
+    if return_item_id.is_some() {
         Json(ApiResponse {
             success: true,
             data: Some(()),
@@ -158,6 +161,7 @@ pub async fn api_edit_item(
         }
 
         if let Some(api_item) = found_item {
+            info!("Item edited successfully: {}", api_item.id);
             Ok(Json(ApiResponse {
                 success: true,
                 data: Some(api_item),

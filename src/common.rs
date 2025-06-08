@@ -1,4 +1,5 @@
 use axum::extract::{Path as AxumPath, State};
+use log::info;
 use rss::{Channel, ChannelBuilder, Guid, Item, ItemBuilder};
 use std::sync::{Arc, Mutex};
 use std::{
@@ -47,12 +48,17 @@ where
     F::Reader: Read,
 {
     if fs.exists("./feed/feed.xml") {
+        info!("Feed found on disk, reading...");
         let file = fs.open("./feed/feed.xml").expect("Error opening feed.xml");
         let reader = BufReader::new(file);
-        Channel::read_from(reader).expect("Error reading feed into Channel")
+        let channel = Channel::read_from(reader).expect("Error reading feed into Channel");
+        info!("Feed successfully read from disk");
+        channel
     } else {
+        info!("No feed found on disk, creating based on environment variables");
         let channel = create_feed();
         write_channel(&channel, None, fs);
+        info!("Feed successfully created and written to disk");
         channel
     }
 }
@@ -86,7 +92,14 @@ pub fn create_item(title: String, description: Option<String>, link: Option<Stri
         builder = builder.link(Some(link));
     }
 
-    builder.build()
+    let item = builder.build();
+    info!(
+        "Item Created:\n{{\n\t\"title\": \"{}\"\n\t\"description\": \"{}\"\n\t\"link\": \"{}\"\n}}",
+        item.clone().title.unwrap(),
+        item.clone().description.unwrap_or_default(),
+        item.clone().link.unwrap_or_default()
+    );
+    item
 }
 
 pub fn write_channel<F: FileSystem>(channel: &Channel, path: Option<&str>, fs: &F) {
@@ -94,6 +107,7 @@ pub fn write_channel<F: FileSystem>(channel: &Channel, path: Option<&str>, fs: &
     let file_path = path.unwrap_or("./feed/feed.xml");
     fs.write(file_path, &rss_content)
         .expect("Failed to write RSS feed to file");
+    info!("Feed written successfully");
 }
 
 pub fn add_item(State(state): State<AppState>, item: Item) {
