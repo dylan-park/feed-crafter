@@ -1,7 +1,7 @@
 mod common;
 
 use chrono::DateTime;
-use common::*;
+use common::{TempEnv, acquire_env_lock};
 use feed_crafter::common::create_feed;
 
 #[test]
