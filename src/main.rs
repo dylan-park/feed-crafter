@@ -36,10 +36,10 @@ async fn main() {
         .route("/", get(index))
         .route("/feed.xml", get(serve_file))
         .route("/add", get(add_item_form))
-        .route("/add", post(add_item))
-        .route("/delete/{id}", post(delete_item))
+        .route("/add", post(web_add_item))
+        .route("/delete/{id}", post(web_delete_item))
         .route("/edit/{id}", get(edit_item_form))
-        .route("/edit/{id}", post(edit_item))
+        .route("/edit/{id}", post(web_edit_item))
         .route("/health", get(health_check))
         // API routes
         .route("/api/items", get(api_get_items))
