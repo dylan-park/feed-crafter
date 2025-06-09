@@ -4,8 +4,8 @@ use axum::{
     http::StatusCode,
     response::Json,
 };
-use serde::Deserialize;
 use log::info;
+use serde::Deserialize;
 
 // API data structures
 #[derive(Deserialize)]
@@ -99,7 +99,10 @@ pub async fn api_delete_item(
     State(state): State<AppState>,
     Path(item_id): Path<String>,
 ) -> Json<ApiResponse<()>> {
-    let return_item_id = delete_item(axum::extract::State(state), axum::extract::Path(item_id.clone()));
+    let return_item_id = delete_item(
+        axum::extract::State(state),
+        axum::extract::Path(item_id.clone()),
+    );
     info!("Item deleted successfully: {}", item_id.clone());
 
     if return_item_id.is_some() {

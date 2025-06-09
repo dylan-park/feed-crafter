@@ -34,6 +34,7 @@ services:
     container_name: feed-crafter
     network_mode: bridge
     environment:
+      - RUST_LOG=info
       - SERVER_ADDRESS=0.0.0.0
       - SERVER_PORT=3000
       - CHANNEL_TITLE="RSS Channel" # change to name the RSS feed
@@ -68,6 +69,7 @@ docker run -d \
   --restart unless-stopped \
   -p 3000:3000 \
   -v ./feed/feed.xml:/app/feed/feed.xml \
+  -e RUST_LOG=info \
   -e SERVER_ADDRESS=0.0.0.0 \
   -e SERVER_PORT=3000 \
   -e CHANNEL_TITLE="RSS Channel" \
