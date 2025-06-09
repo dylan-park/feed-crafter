@@ -1,5 +1,5 @@
 use axum::extract::{Path as AxumPath, State};
-use log::info;
+use log::{debug, info, warn};
 use rss::{Channel, ChannelBuilder, Guid, Item, ItemBuilder};
 use std::sync::{Arc, Mutex};
 use std::{
@@ -191,4 +191,83 @@ pub fn edit_item(
         }
     }
     return_item
+}
+
+pub fn cleanup_old_items<F: FileSystem>(state: &AppState, fs: &F) -> usize {
+    let max_age_seconds = match env::var("MAX_ITEM_AGE_SECONDS") {
+        Ok(val) => match val.parse::<u64>() {
+            Ok(seconds) => seconds,
+            Err(_) => {
+                warn!(
+                    "Invalid MAX_ITEM_AGE_SECONDS value: '{}', skipping cleanup",
+                    val
+                );
+                return 0;
+            }
+        },
+        Err(_) => {
+            debug!("MAX_ITEM_AGE_SECONDS not set, skipping cleanup");
+            return 0;
+        }
+    };
+
+    if max_age_seconds == 0 {
+        debug!("MAX_ITEM_AGE_SECONDS is 0, items will be kept indefinitely");
+        return 0;
+    }
+
+    let cutoff_date = chrono::Utc::now() - chrono::Duration::seconds(max_age_seconds as i64);
+
+    let items_removed = {
+        let mut channel = state.channel.lock().unwrap();
+        let original_count = channel.items().len();
+
+        let items: Vec<Item> = channel
+            .items()
+            .iter()
+            .filter(|item| {
+                if let Some(pub_date_str) = item.pub_date() {
+                    match chrono::DateTime::parse_from_rfc2822(pub_date_str) {
+                        Ok(pub_date) => {
+                            let is_old = pub_date.with_timezone(&chrono::Utc) < cutoff_date;
+                            if is_old {
+                                info!(
+                                    "Removing old item: '{}'",
+                                    item.title().unwrap_or("Untitled")
+                                );
+                            }
+                            !is_old
+                        }
+                        Err(_) => {
+                            warn!(
+                                "Invalid pub_date format for item: '{}'",
+                                item.title().unwrap_or("Untitled")
+                            );
+                            true // Keep items with invalid dates
+                        }
+                    }
+                } else {
+                    warn!(
+                        "Item has no pub_date: '{}'",
+                        item.title().unwrap_or("Untitled")
+                    );
+                    true // Keep items without pub_date
+                }
+            })
+            .cloned()
+            .collect();
+
+        let removed_count = original_count - items.len();
+
+        if removed_count > 0 {
+            channel.set_items(items);
+            channel.set_last_build_date(chrono::Utc::now().to_rfc2822());
+            write_channel(&channel, None, fs);
+            info!("Cleaned up {} old items from feed", removed_count);
+        }
+
+        removed_count
+    };
+
+    items_removed
 }
