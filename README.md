@@ -18,12 +18,17 @@ cargo run -r
 ```
 Make sure you have all the environment variables set, or a .env file like this
 ```dotenv
+RUST_LOG=info
+
 SERVER_ADDRESS=127.0.0.1
 SERVER_PORT=3000
 
 CHANNEL_TITLE="Test Channel"
 CHANNEL_LINK=http://example.com
 CHANNEL_DESCRIPTION="An RSS feed."
+
+MAX_ITEM_AGE_SECONDS=0
+CLEANUP_INTERVAL_SECONDS=3600
 ```
 
 To run via Docker Compose (docker-compose.yaml):
