@@ -40,6 +40,8 @@ services:
       - CHANNEL_TITLE="RSS Channel" # change to name the RSS feed
       - CHANNEL_LINK=http://localhost:3000 # required by RSS standard, can be modified if you like
       - CHANNEL_DESCRIPTION="An RSS feed." # change to describe the RSS feed
+      - MAX_ITEM_AGE_SECONDS=0 #change to the time in seconds any feed item should stay in the system (0 for indefinite)
+      - CLEANUP_INTERVAL_SECONDS=3600 # change how ofter the system checks for old messages (must be <=MAX_ITEM_AGE_SECONDS for proper timing to work, set accordingly)
     volumes:
       - ./feed:/app/feed
     ports:
@@ -75,6 +77,8 @@ docker run -d \
   -e CHANNEL_TITLE="RSS Channel" \
   -e CHANNEL_LINK=http://localhost:3000 \
   -e CHANNEL_DESCRIPTION="An RSS feed." \
+  -e MAX_ITEM_AGE_SECONDS=0 \
+  -e CLEANUP_INTERVAL_SECONDS=3600 \
   feed-crafter
 ```
 
