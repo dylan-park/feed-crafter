@@ -9,12 +9,15 @@ use axum::{
 };
 use common::*;
 use dotenvy::dotenv;
-use log::info;
+use log::{debug, info};
 use std::{
     env, fs,
     sync::{Arc, Mutex},
 };
-use tokio::net::TcpListener;
+use tokio::{
+    net::TcpListener,
+    time::{Duration, interval},
+};
 use tower_http::services::ServeDir;
 use web::*;
 
@@ -31,6 +34,9 @@ async fn main() {
     let app_state = AppState {
         channel: Arc::new(Mutex::new(channel)),
     };
+
+    // Start the cleanup timer
+    start_cleanup_timer(app_state.clone());
 
     // Build our application with routes
     let app = Router::new()
@@ -60,4 +66,29 @@ async fn main() {
 
     info!("Server running on http://{}:{}", address, port);
     axum::serve(listener, app).await.unwrap();
+}
+
+pub fn start_cleanup_timer(state: AppState) {
+    let cleanup_interval_seconds = env::var("CLEANUP_INTERVAL_SECONDS")
+        .unwrap_or_else(|_| "3600".to_string()) // Default to 1 hour
+        .parse::<u64>()
+        .unwrap_or(3600);
+
+    tokio::spawn(async move {
+        let mut interval_timer = interval(Duration::from_secs(cleanup_interval_seconds));
+
+        // Skip the first tick (which fires immediately)
+        interval_timer.tick().await;
+
+        loop {
+            interval_timer.tick().await;
+
+            let removed_count = cleanup_old_items(&state, &RealFileSystem);
+            if removed_count > 0 {
+                debug!("Periodic cleanup removed {} items", removed_count);
+            } else {
+                debug!("Periodic cleanup - no items to remove");
+            }
+        }
+    });
 }
