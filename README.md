@@ -45,7 +45,7 @@ services:
       - CHANNEL_TITLE="RSS Channel" # change to name the RSS feed
       - CHANNEL_LINK=http://localhost:3000 # required by RSS standard, can be modified if you like
       - CHANNEL_DESCRIPTION="An RSS feed." # change to describe the RSS feed
-      - MAX_ITEM_AGE_SECONDS=0 #change to the time in seconds any feed item should stay in the system (0 for indefinite)
+      - MAX_ITEM_AGE_SECONDS=0 # change to the time in seconds any feed item should stay in the system (0 for indefinite)
       - CLEANUP_INTERVAL_SECONDS=3600 # change how ofter the system checks for old messages (must be <=MAX_ITEM_AGE_SECONDS for proper timing to work, set accordingly)
     volumes:
       - ./feed:/app/feed
@@ -75,7 +75,7 @@ docker run -d \
   --network bridge \
   --restart unless-stopped \
   -p 3000:3000 \
-  -v ./feed/feed.xml:/app/feed/feed.xml \
+  -v ./feed:/app/feed \
   -e RUST_LOG=info \
   -e SERVER_ADDRESS=0.0.0.0 \
   -e SERVER_PORT=3000 \
@@ -89,7 +89,7 @@ docker run -d \
 
 ## How To Use
 
-When Feed Crafter is first run, an RSS feed file is created based on environment variables (either in your system or in the .env file). If it finds an existing file it will use that instead.
+When Feed Crafter is first run, an RSS feed file is created based on environment variables (either in your system or in the .env file). If it finds an existing file it will use that instead. This feed is accessible at the address: http://localhost:3000/feed.xml
 
 ### Web Interface
 
