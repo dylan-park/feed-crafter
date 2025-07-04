@@ -76,7 +76,7 @@ pub async fn serve_file() -> impl IntoResponse {
         Ok(contents) => {
             let body = Body::from(contents);
             Response::builder()
-                .header("Content-Type", "application/rss+xml")
+                .header("Content-Type", "application/xml")
                 .body(body)
                 .unwrap()
         }
